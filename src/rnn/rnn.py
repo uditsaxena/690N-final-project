@@ -56,7 +56,7 @@ import numpy as np
 from keras.utils.data_utils import get_file
 from keras.layers.embeddings import Embedding
 from keras import layers
-from keras.layers import recurrent
+from keras.layers import recurrent, Bidirectional
 from keras.models import Model
 from keras.preprocessing.sequence import pad_sequences
 import time
@@ -126,7 +126,8 @@ def vectorize_stories(data, word_idx, story_maxlen, query_maxlen):
     return pad_sequences(xs, maxlen=story_maxlen), pad_sequences(xqs, maxlen=query_maxlen), np.array(ys)
 
 
-RNN = recurrent.LSTM
+# RNN = recurrent.LSTM
+RNN = Bidirectional(layers.LSTM)
 EMBED_HIDDEN_SIZE = 50
 SENT_HIDDEN_SIZE = 100
 QUERy_HIDDEN_SIZE = 100

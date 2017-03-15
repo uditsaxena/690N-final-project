@@ -1,0 +1,5 @@
+Facebook - Babi dataset format:
+([<tokenized story>],[<tokenized question>],'one word answer')
+
+(['Mary', 'moved', 'to', 'the', 'bathroom', '.', 'Sandra', 'journeyed', 'to', 'the', 'bedroom', '.', 'Mary', 'got', 'the', 'football', 'there', '.', 'John', 'went', 'to', 'the', 'kitchen', '.', 'Mary', 'went', 'back', 'to', 'the', 'kitchen', '.', 'Mary', 'went', 'back', 'to', 'the', 'garden', '.'], ['Where', 'is', 'the', 'football', '?'], 'garden')
+
