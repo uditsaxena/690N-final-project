@@ -57,18 +57,18 @@ This becomes especially obvious on QA2 and QA3, both far longer than QA1.
 '''
 
 from __future__ import print_function
-from functools import reduce
+
 import re
 import tarfile
+from functools import reduce
 
+import gensim
 import numpy as np
-
-from keras.utils.data_utils import get_file
-from keras.layers.embeddings import Embedding
 from keras import layers
 from keras.layers import recurrent
 from keras.models import Model
 from keras.preprocessing.sequence import pad_sequences
+from keras.utils.data_utils import get_file
 
 
 def tokenize(sent):
@@ -122,7 +122,8 @@ def get_stories(f, only_supporting=False, max_length=None):
     '''
     data = parse_stories(f.readlines(), only_supporting=only_supporting)
     flatten = lambda data: reduce(lambda x, y: x + y, data)
-    data = [(flatten(story), q, answer) for story, q, answer in data if not max_length or len(flatten(story)) < max_length]
+    data = [(flatten(story), q, answer) for story, q, answer in data if
+            not max_length or len(flatten(story)) < max_length]
     return data
 
 
@@ -130,6 +131,25 @@ def vectorize_stories(data, word_idx, story_maxlen, query_maxlen):
     xs = []
     xqs = []
     ys = []
+    for story, query, answer in data:
+        x = [word_idx[w] for w in story]
+        xq = [word_idx[w] for w in query]
+        # let's not forget that index 0 is reserved
+        y = np.zeros(len(word_idx) + 1)
+        y[word_idx[answer]] = 1
+        xs.append(x)
+        xqs.append(xq)
+        ys.append(y)
+    return pad_sequences(xs, maxlen=story_maxlen), pad_sequences(xqs, maxlen=query_maxlen), np.array(ys)
+
+
+def vectorize_stories_word2vec(data, word_idx, story_maxlen, query_maxlen):
+    xs = []
+    xqs = []
+    ys = []
+    model = gensim.models.KeyedVectors.load_word2vec_format('../../pre_trained_emb/GoogleNews-vectors-negative300.bin',
+                                                        binary=True)
+
     for story, query, answer in data:
         x = [word_idx[w] for w in story]
         xq = [word_idx[w] for w in query]
@@ -182,8 +202,8 @@ def main():
     word_idx = dict((c, i + 1) for i, c in enumerate(vocab))
     story_maxlen = max(map(len, (x for x, _, _ in train + test)))
     query_maxlen = max(map(len, (x for _, x, _ in train + test)))
-    x, xq, y = vectorize_stories(train, word_idx, story_maxlen, query_maxlen)
-    tx, txq, ty = vectorize_stories(test, word_idx, story_maxlen, query_maxlen)
+    x, xq, y = vectorize_stories_word2vec(train, word_idx, story_maxlen, query_maxlen)
+    tx, txq, ty = vectorize_stories_word2vec(test, word_idx, story_maxlen, query_maxlen)
     print('vocab = {}'.format(vocab))
     print('x.shape = {}'.format(x.shape))
     print('xq.shape = {}'.format(xq.shape))
@@ -214,6 +234,7 @@ def main():
     loss, acc = model.evaluate([tx, txq], ty,
                                batch_size=BATCH_SIZE)
     print('Test loss / test accuracy = {:.4f} / {:.4f}'.format(loss, acc))
+
 
 if __name__ == '__main__':
     main()
