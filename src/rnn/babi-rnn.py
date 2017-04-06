@@ -147,8 +147,8 @@ def vectorize_stories_word2vec(data, word_idx, story_maxlen, query_maxlen):
     xs = []
     xqs = []
     ys = []
-    model = gensim.models.KeyedVectors.load_word2vec_format('../../pre_trained_emb/GoogleNews-vectors-negative300.bin',
-                                                        binary=True)
+    #model = gensim.models.KeyedVectors.load_word2vec_format('../../pre_trained_emb/GoogleNews-vectors-negative300.bin',
+    #                                                    binary=True)
 
     for story, query, answer in data:
         x = [word_idx[w] for w in story]
