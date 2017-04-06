@@ -63,6 +63,7 @@ import tarfile
 from functools import reduce
 
 import gensim
+import tensorflow as tf
 import numpy as np
 from keras import layers
 from keras.layers import recurrent
@@ -237,4 +238,5 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    with tf.device("`1/gpu:0"):
+        main()
