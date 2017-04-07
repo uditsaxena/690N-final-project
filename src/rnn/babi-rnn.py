@@ -288,7 +288,7 @@ if __name__ == '__main__':
         upper = (int)(arg_list[0])
         for i in range(upper - 2, upper):
             print(i + 1)
-            for type in ["lstm", "gru", "simplernn", "recurrent"]:
+            for type in ["lstm", "gru", "simplernn"]:#, "recurrent"]:
                 main(i + 1, type)
     # main(1, "lstm")
     # main(2, "lstm")
