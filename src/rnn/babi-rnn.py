@@ -58,11 +58,12 @@ This becomes especially obvious on QA2 and QA3, both far longer than QA1.
 
 from __future__ import print_function
 
-import re
-import tarfile
+import re, os
+import sys
 from functools import reduce
 
-import gensim
+
+import pandas
 import tensorflow as tf
 import numpy as np
 from keras import layers
@@ -90,7 +91,7 @@ def parse_stories(lines, only_supporting=False):
     data = []
     story = []
     for line in lines:
-        line = line.decode('utf-8').strip()
+        #line = line.decode('utf-8').strip()
         nid, line = line.split(' ', 1)
         nid = int(nid)
         if nid == 1:
@@ -148,7 +149,7 @@ def vectorize_stories_word2vec(data, word_idx, story_maxlen, query_maxlen):
     xs = []
     xqs = []
     ys = []
-    #model = gensim.models.KeyedVectors.load_word2vec_format('../../pre_trained_emb/GoogleNews-vectors-negative300.bin',
+    # model = gensim.models.KeyedVectors.load_word2vec_format('../../pre_trained_emb/GoogleNews-vectors-negative300.bin',
     #                                                    binary=True)
 
     for story, query, answer in data:
@@ -163,37 +164,80 @@ def vectorize_stories_word2vec(data, word_idx, story_maxlen, query_maxlen):
     return pad_sequences(xs, maxlen=story_maxlen), pad_sequences(xqs, maxlen=query_maxlen), np.array(ys)
 
 
-def main():
+def main(i, RNN_TYPE):
     # TODO: change to GRU, Recurrent, and SimpleRNN
+    print(i, RNN_TYPE)
     RNN = recurrent.LSTM
+    if RNN_TYPE == "gru":
+        # print("Starting a GRU: ")
+        RNN = recurrent.GRU
+        file_name = "history_gru_" + str(i) + ".csv"
+
+    elif RNN_TYPE == "recurrent":
+        # print("Starting a Recurrent Unit: ")
+        RNN = recurrent.Recurrent
+        file_name = "history_recurrent_" + str(i) + ".csv"
+
+    elif RNN_TYPE == "simplernn":
+        # print("Starting a SimpleRNN: ")
+        RNN = recurrent.SimpleRNN
+        file_name = "history_simple_" + str(i) + ".csv"
+    else:
+        # print("Starting an LSTM")
+        file_name = "history_lstm_" + str(i) + ".csv"
+
     EMBED_HIDDEN_SIZE = 50
     SENT_HIDDEN_SIZE = 100
     QUERY_HIDDEN_SIZE = 100
-    BATCH_SIZE = 32
-    EPOCHS = 40
+    BATCH_SIZE = 50
+    EPOCHS = 100
     print('RNN / Embed / Sent / Query = {}, {}, {}, {}'.format(RNN,
                                                                EMBED_HIDDEN_SIZE,
                                                                SENT_HIDDEN_SIZE,
                                                                QUERY_HIDDEN_SIZE))
-    try:
-        path = get_file('babi-tasks-v1-2.tar.gz',
-                        origin='https://s3.amazonaws.com/text-datasets/babi_tasks_1-20_v1-2.tar.gz')
-    except:
-        print('Error downloading dataset, please download it manually:\n'
-              '$ wget http://www.thespermwhale.com/jaseweston/babi/tasks_1-20_v1-2.tar.gz\n'
-              '$ mv tasks_1-20_v1-2.tar.gz ~/.keras/datasets/babi-tasks-v1-2.tar.gz')
-        raise
-    tar = tarfile.open(path)
-    # Default QA1 with 1000 samples
-    # challenge = 'tasks_1-20_v1-2/en/qa1_single-supporting-fact_{}.txt'
-    # QA1 with 10,000 samples
-    # challenge = 'tasks_1-20_v1-2/en-10k/qa1_single-supporting-fact_{}.txt'
-    # QA2 with 1000 samples
-    challenge = 'tasks_1-20_v1-2/en/qa2_two-supporting-facts_{}.txt'
-    # QA2 with 10,000 samples
-    # challenge = 'tasks_1-20_v1-2/en-10k/qa2_two-supporting-facts_{}.txt'
-    train = get_stories(tar.extractfile(challenge.format('train')))
-    test = get_stories(tar.extractfile(challenge.format('test')))
+    print(os.getcwd())
+    file_list = (os.getcwd())
+    base_file = os.getcwd() + "/tasks_1-20_v1-2/en/"
+    file_list = (os.listdir(base_file))
+    print(file_list)
+    test_file = ""
+    train_file = ""
+    for file in file_list:
+        if file.startswith("qa" + str(i)):
+            if file.endswith("_test.txt"):
+                test_file = file
+                # print(test_file)
+            elif file.endswith("_train.txt"):
+                train_file = file
+                # print(train_file)
+    print(train_file)
+    print(test_file)
+
+    f_train = open(base_file+train_file)
+    f_test = open(base_file+test_file)
+
+    # try:
+    #     path = get_file('babi-tasks-v1-2.tar.gz',
+    #                     origin='https://s3.amazonaws.com/text-datasets/babi_tasks_1-20_v1-2.tar.gz')
+    # except:
+    #     print('Error downloading dataset, please download it manually:\n'
+    #           '$ wget http://www.thespermwhale.com/jaseweston/babi/tasks_1-20_v1-2.tar.gz\n'
+    #           '$ mv tasks_1-20_v1-2.tar.gz ~/.keras/datasets/babi-tasks-v1-2.tar.gz')
+    #     raise
+    # tar = tarfile.open(path)
+    # # Default QA1 with 1000 samples
+    # # challenge = 'tasks_1-20_v1-2/en/qa1_single-supporting-fact_{}.txt'
+    # # QA1 with 10,000 samples
+    # # challenge = 'tasks_1-20_v1-2/en-10k/qa1_single-supporting-fact_{}.txt'
+    # # QA2 with 1000 samples
+    # challenge = 'tasks_1-20_v1-2/en/qa2_two-supporting-facts_{}.txt'
+    # # QA2 with 10,000 samples
+    # # challenge = 'tasks_1-20_v1-2/en-10k/qa2_two-supporting-facts_{}.txt'
+
+    # train = get_stories(tar.extractfile(challenge.format('train')))
+    # test = get_stories(tar.extractfile(challenge.format('test')))
+    train = get_stories(f_train)
+    test = get_stories(f_test)
     vocab = set()
     for story, q, answer in train + test:
         vocab |= set(story + q + [answer])
@@ -228,15 +272,23 @@ def main():
                   loss='categorical_crossentropy',
                   metrics=['accuracy'])
     print('Training')
-    model.fit([x, xq], y,
-              batch_size=BATCH_SIZE,
-              epochs=EPOCHS,
-              validation_split=0.05)
+    history = model.fit([x, xq], y, batch_size=BATCH_SIZE, epochs=EPOCHS, validation_split=0.05)
+    pandas.DataFrame(history.history).to_csv(file_name)
+
     loss, acc = model.evaluate([tx, txq], ty,
                                batch_size=BATCH_SIZE)
+
+    pandas.DataFrame([str(loss)+"_"+ str(acc)]).to_csv("test_"+RNN_TYPE+"_"+str(i)+".csv")
     print('Test loss / test accuracy = {:.4f} / {:.4f}'.format(loss, acc))
 
 
 if __name__ == '__main__':
-    with tf.device("/gpu:0"):
-        main()
+    arg_list = sys.argv[1:]
+    if len(arg_list) > 0:
+        upper = (int)(arg_list[0])
+        for i in range(upper - 2, upper):
+            print(i + 1)
+            for type in ["lstm", "gru", "simplernn", "recurrent"]:
+                main(i + 1, type)
+    # main(1, "lstm")
+    # main(2, "lstm")
