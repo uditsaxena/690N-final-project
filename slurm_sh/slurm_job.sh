@@ -11,5 +11,5 @@ echo $SLURM_JOBID - `hostname` >> ~/slurm-lstm-jobs.txt
 
 module purge
 module load tensorflow/1.0.0
-cd /home/usaxena/work/690/project/src/rnn
-python babi-rnn.py
+cd /mnt/nfs/work1/mccallum/usaxena/nlp/src/rnn
+python babi-rnn.py 2
