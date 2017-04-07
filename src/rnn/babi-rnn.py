@@ -203,7 +203,7 @@ def main(i, RNN_TYPE):
     test_file = ""
     train_file = ""
     for file in file_list:
-        if file.startswith("qa" + str(i)):
+        if file.startswith("qa" + str(i)+"_"):
             if file.endswith("_test.txt"):
                 test_file = file
                 # print(test_file)
