@@ -23,8 +23,8 @@ def get_train_test_files(i):
                 test_file_list.append(base_file + file)
             elif file.endswith("_train.txt"):
                 train_file_list.append(base_file + file)
-    print(train_file_list)
-    print(test_file_list)
+    # print(train_file_list)
+    # print(test_file_list)
 
     # f_train = open(base_file + train_file_list)
     # f_test = open(base_file + test_file_list)
@@ -138,18 +138,19 @@ if __name__ == '__main__':
     # print(model.vocab)
     arg_list = sys.argv[1:]
     data = []
+    iterations = (int)(arg_list[1])
     if len(arg_list) > 0:
         upper = (int)(arg_list[0])
         # for i in range(upper - 1, upper):
         for i in range(upper - 19, upper+1):
-            print("File number: ", i)
+            # print("File number: ", i)
             list = main(i)
             data += list
             # print(len(data))
     print("Starting to train !")
     print(FAST_VERSION)
     start = time.time()
-    model = Word2Vec(data, size=100, window=3, min_count=1, workers=1, iter=100)
+    model = Word2Vec(data, size=100, window=3, min_count=1, workers=1, iter=iterations)
     model.save(fname)
     model.wv.save_word2vec_format(fname, fvocab="vocab", binary=True)
     end = time.time()
