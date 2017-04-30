@@ -12,7 +12,6 @@ Time per epoch: 3s on CPU (core i7).
 from __future__ import print_function
 
 import pandas
-from gensim.models import KeyedVectors
 from keras.models import Sequential, Model
 from keras.layers.embeddings import Embedding
 from keras.layers import Input, Activation, Dense, Permute, Dropout, add, dot, concatenate, recurrent
@@ -94,33 +93,6 @@ def vectorize_stories(data, word_idx, story_maxlen, query_maxlen):
     return (pad_sequences(X, maxlen=story_maxlen),
             pad_sequences(Xq, maxlen=query_maxlen), np.array(Y))
 
-def get_word_vectors_from_pretr_embeddings(train, test, vocab):
-    get_pre_trained_emb(vocab)
-
-
-def get_pre_trained_emb(vocab):
-    model = get_model()
-    # model loaded
-    # print(len(model.vocab.keys()), len(vocab))
-    idx_to_word = enumerate(vocab)
-    word_to_idx = {}
-    for i, c in idx_to_word:
-        # print(i, c)
-        word_to_idx[c] = i + 1  # 0 reserved for masking
-    emb_dim = 100 #EMBEDDING_DIMENSION
-    vocab_len = len(vocab) + 1  # 0 reserved for masking
-    pre_trained_emb_weights = np.zeros((vocab_len, emb_dim))
-    for word, index in word_to_idx.items():
-        pre_trained_emb_weights[index, :] = model[word]
-    # print(pre_trained_emb_weights)
-    return pre_trained_emb_weights
-
-
-def get_model():
-    fname = "word2vec_100_1000.w2v"
-    model = KeyedVectors.load_word2vec_format(fname=fname, fvocab="vocab", binary=True)
-    return model
-
 
 def main(i, RNN_TYPE):
     # TODO: change to GRU, Recurrent, and SimpleRNN
@@ -168,6 +140,7 @@ def main(i, RNN_TYPE):
 
     f_train = open(base_file + train_file)
     f_test = open(base_file + test_file)
+
     # try:
     #     path = get_file('babi-tasks-v1-2.tar.gz',
     #                     origin='https://s3.amazonaws.com/text-datasets/babi_tasks_1-20_v1-2.tar.gz')
@@ -186,24 +159,14 @@ def main(i, RNN_TYPE):
     # challenge_type = 'single_supporting_fact_10k'
     # challenge = challenges[challenge_type]
     # print('Extracting stories for the challenge:', challenge_type)
-    # train_stories = get_stories(tar.extractfile(challenge.format('train_stories')))
-    # test_stories = get_stories(tar.extractfile(challenge.format('test_stories')))
-
+    # train_stories = get_stories(tar.extractfile(challenge.format('train')))
+    # test_stories = get_stories(tar.extractfile(challenge.format('test')))
+    # vocab = set()
     train_stories = get_stories(f_train)
     # print(len(train_stories))
     # print("testing stories:")
     test_stories = get_stories(f_test)
     # print(len(test_stories))
-    vocab = set()
-    for story, q, answer in train_stories + test_stories:
-        vocab |= set(story + q + [answer])
-    vocab = sorted(vocab)
-    # check_existence(vocab)
-    # get_word_vectors_from_pretr_embeddings(train_stories, test_stories, vocab)
-
-    # Reserve 0 for masking via pad_sequences
-    vocab_size = len(vocab) + 1
-    print("Vocabulary size: ", vocab_size)
     vocab = set()
     for story, q, answer in train_stories + test_stories:
         vocab |= set(story + q + [answer])
@@ -217,7 +180,7 @@ def main(i, RNN_TYPE):
     print('Story max length:', story_maxlen, 'words')
     print('Query max length:', query_maxlen, 'words')
     print('Number of training stories:', len(train_stories))
-    print('Number of test_stories stories:', len(test_stories))
+    print('Number of test stories:', len(test_stories))
     print('-')
     print('Here\'s what a "story" tuple looks like (input, query, answer):')
     print(train_stories[0])
@@ -247,53 +210,38 @@ def main(i, RNN_TYPE):
     print('-')
     print('Compiling...')
     # placeholders
-    pre_trained_emb_weights = get_pre_trained_emb(vocab)
     input_sequence = Input((story_maxlen,))
     question = Input((query_maxlen,))
     # encoders
     # embed the input sequence into a sequence of vectors
     input_encoder_m = Sequential()
-    # input_encoder_m.add(Embedding(input_dim=vocab_size,
-    #                               output_dim=64))
     input_encoder_m.add(Embedding(input_dim=vocab_size,
-                                  output_dim=100,
-                                        weights=[pre_trained_emb_weights]))
+                                  output_dim=64))
     input_encoder_m.add(Dropout(0.3))
     # output: (samples, story_maxlen, embedding_dim)
     # embed the input into a sequence of vectors of size query_maxlen
     input_encoder_c = Sequential()
-    # input_encoder_c.add(Embedding(input_dim=vocab_size,
-    #                               output_dim=query_maxlen))
     input_encoder_c.add(Embedding(input_dim=vocab_size,
                                   output_dim=query_maxlen))
     input_encoder_c.add(Dropout(0.3))
     # output: (samples, story_maxlen, query_maxlen)
     # embed the question into a sequence of vectors
     question_encoder = Sequential()
-    # question_encoder.add(Embedding(input_dim=vocab_size,
-    #                                output_dim=64,
-    #                                input_length=query_maxlen))
     question_encoder.add(Embedding(input_dim=vocab_size,
-                                   output_dim=100,
-                                   input_length=query_maxlen,
-                                        weights=[pre_trained_emb_weights]))
+                                   output_dim=64,
+                                   input_length=query_maxlen))
     question_encoder.add(Dropout(0.3))
     # output: (samples, query_maxlen, embedding_dim)
     # encode input sequence and questions (which are indices)
     # to sequences of dense vectors
     input_encoded_m = input_encoder_m(input_sequence)
-    # print(input_encoded_m)
     input_encoded_c = input_encoder_c(input_sequence)
-    # print(input_encoded_c)
     question_encoded = question_encoder(question)
-    # print(question_encoded)
     # compute a 'match' between the first input vector sequence
     # and the question vector sequence
     # shape: `(samples, story_maxlen, query_maxlen)`
     match = dot([input_encoded_m, question_encoded], axes=(2, 2))
-    # print(match)
     match = Activation('softmax')(match)
-    # print(match)
     # add the match matrix with the second input vector sequence
     response = add([match, input_encoded_c])  # (samples, story_maxlen, query_maxlen)
     response = Permute((2, 1))(response)  # (samples, query_maxlen, story_maxlen)
@@ -301,7 +249,7 @@ def main(i, RNN_TYPE):
     answer = concatenate([response, question_encoded])
     # the original paper uses a matrix multiplication for this reduction step.
     # we choose to use a RNN instead.
-    answer = RNN(32)(answer)  # (samples, 32)
+    answer = LSTM(32)(answer)  # (samples, 32)
     # one regularization layer -- more would probably be needed.
     answer = Dropout(0.3)(answer)
     answer = Dense(vocab_size)(answer)  # (samples, vocab_size)
@@ -311,18 +259,18 @@ def main(i, RNN_TYPE):
     model = Model([input_sequence, question], answer)
     model.compile(optimizer='rmsprop', loss='categorical_crossentropy',
                   metrics=['accuracy'])
-    # train_stories
+    # train
     history = model.fit([inputs_train, queries_train], answers_train,
               batch_size=32,
               epochs=EPOCHS,
               validation_data=([inputs_test, queries_test], answers_test))
 
-    pandas.DataFrame(history.history).to_csv("pret_" + file_name)
+    pandas.DataFrame(history.history).to_csv("basic_" + file_name)
 
     loss, acc = model.evaluate([inputs_test, queries_test], answers_test,
                                batch_size=BATCH_SIZE)
 
-    pandas.DataFrame([str(loss) + "_" + str(acc)]).to_csv("pret_test_" + RNN_TYPE + "_" + str(i) + ".csv")
+    pandas.DataFrame([str(loss) + "_" + str(acc)]).to_csv("basic_test_" + RNN_TYPE + "_" + str(i) + ".csv")
     print('Test loss / test accuracy = {:.4f} / {:.4f}'.format(loss, acc))
 
 if __name__ == '__main__':
