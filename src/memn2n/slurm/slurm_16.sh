@@ -2,7 +2,7 @@
 #
 #SBATCH --job-name=us_memn2n_16
 #SBATCH --mem=10000
-
+#SBATCH --partition=titanx-long
 #SBATCH --output=us_experiment_%A.out
 #SBATCH --error=us_experiment_%A.err
 

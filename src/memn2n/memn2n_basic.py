@@ -265,12 +265,12 @@ def main(i, RNN_TYPE):
               epochs=EPOCHS,
               validation_data=([inputs_test, queries_test], answers_test))
 
-    pandas.DataFrame(history.history).to_csv("basic_" + file_name)
+    pandas.DataFrame(history.history).to_csv("__basic_" + file_name)
 
     loss, acc = model.evaluate([inputs_test, queries_test], answers_test,
                                batch_size=BATCH_SIZE)
 
-    pandas.DataFrame([str(loss) + "_" + str(acc)]).to_csv("basic_test_" + RNN_TYPE + "_" + str(i) + ".csv")
+    pandas.DataFrame([str(loss) + "_" + str(acc)]).to_csv("__basic_test_" + RNN_TYPE + "_" + str(i) + ".csv")
     print('Test loss / test accuracy = {:.4f} / {:.4f}'.format(loss, acc))
 
 if __name__ == '__main__':

@@ -470,12 +470,12 @@ def main(i, RNN_TYPE):
                   metrics=['accuracy'])
     print('Training')
     history = model.fit([x, xq], y, batch_size=BATCH_SIZE, epochs=EPOCHS, validation_split=0.05)
-    pandas.DataFrame(history.history).to_csv(file_name)
+    pandas.DataFrame(history.history).to_csv("__pre_"+file_name)
 
     loss, acc = model.evaluate([tx, txq], ty,
                                batch_size=BATCH_SIZE)
 
-    pandas.DataFrame([str(loss)+"_"+ str(acc)]).to_csv("test_"+RNN_TYPE+"_"+str(i)+".csv")
+    pandas.DataFrame([str(loss)+"_"+ str(acc)]).to_csv("__test_"+RNN_TYPE+"_"+str(i)+".csv")
     print('Test loss / test accuracy = {:.4f} / {:.4f}'.format(loss, acc))
 
 
